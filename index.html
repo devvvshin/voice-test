@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        overflow: hidden;
+        padding: 0px;
+        margin: 0px;
+      }
+      #app {
+        width: 100vw;
+        height: 100vh;
+        padding:0px;
+        margin:0px;
+        margin-top: 200px;
+        overflow: auto;
+      }
+      #text{
+        font-weight: bold;;
+        font-size: 60px;
+        position: absolute;
+        z-index: 100;
+        left:50%;
+        top:10px;
+        width: 100%;
+        height: 200px;
+        transform: translateX(-50%);
+      }
+    </style>
+    <script src='./socket.io.min.js'></script>
+  </head>
+  <body>
+    <div id='app'>
+    </div>
+    <div id='text'>
+    </div>
+    <script>
+      var app = document.getElementById('app');
+      var transcriptText = document.getElementById('text')
+      var photoMetas = [];
+      function refresh() {
+        app.innerHTML = '';
+
+        photoMetas.forEach(function(photoMeta) {
+          var thumbnail_src = photoMeta.thumbnail_src;
+          var tags = photoMeta.tags;
+          var date = photoMeta.date;
+          var caption = photoMeta.caption;
+
+          date = new Date(date);
+          const wrap = document.createElement('div');
+          wrap.style.border = '1px solid #000';
+          wrap.style.display = 'inline-block';
+          wrap.style.padding = '10px';
+          wrap.style.overflow = 'auto'
+          const img = document.createElement('img');
+          img.src = thumbnail_src;
+          img.width = '200'
+
+          const tagsDiv = document.createElement('div');
+          tagsDiv.style.width = '200px';
+          tagsDiv.style.position = 'relative';
+          tagsDiv.style.float = 'left';
+          tagsDiv.style.left = '0px';
+          tagsDiv.style.top = '0px';
+          tagsDiv.innerHTML = date.getFullYear()+'.' + (date.getMonth()+1) +'.'+ date.getDate() + '<br>'
+          tagsDiv.innerHTML += caption +"<br><br>"
+          // tagsDiv.innerHTML += tags.reduce(function(result, tag) {
+          //   result += '#' + tag;
+          //   return result;
+          // }, '');
+
+          wrap.appendChild(img);
+          wrap.appendChild(tagsDiv);
+
+          app.appendChild(wrap);
+        })
+      }
+
+      refresh()
+
+      var recognition = new (webkitSpeechRecognition || SpeechRecognition)();
+
+      transcriptText.onclick = function() {
+        recognition.start();
+
+      }
+
+      const socket = io();
+
+      socket.on('ready', function() {
+        socket.emit('queryText', '  ');
+
+        recognition.lang = 'ko';
+        recognition.onspeechend = function() {
+        }
+
+        recognition.onnomatch = function() {
+          recognition.stop();
+          setTimeout(() => {
+            recognition.start();
+          }, 10);
+        }
+
+        recognition.onresult = function(e) {
+          recognition.stop();
+          var text = e.results[0][0].transcript;
+          if(text == '야') {
+            transcriptText.innerHTML += 'A';
+          }
+          setTimeout(() => {
+            recognition.start();
+          }, 10);
+//          socket.emit('queryText', text);
+        }
+      })
+
+      socket.on('update', function({photos, text}) {
+
+        photoMetas = photos.slice(0, 40);
+        transcriptText.innerHTML = text + "(count : " + photos.length + ")";
+        refresh();
+      })
+
+    </script>
+  </body>
+</html>
